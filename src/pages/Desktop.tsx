@@ -45,6 +45,7 @@ export default function Desktop(props: MacActions) {
   // A. 状态与 Ref 管理
   // ----------------------------------------
   const store = useStore();
+  
   const [state, setState] = useState<DesktopState>({
     showLaunchpad: false, 
     currentTitle: "Finder",
@@ -58,7 +59,28 @@ export default function Desktop(props: MacActions) {
   const isDragging = useRef(false);
   const startX = useRef(0);
   const scrollLeft = useRef(0);
-  
+
+  // 🌟 新增：强制静态壁纸状态
+  const [forceStatic, setForceStatic] = useState(false);
+
+  // 🌟 新增：5秒黑屏/播放失败检测逻辑
+  useEffect(() => {
+    // 每次切换壁纸或者开启视频壁纸时，先重置状态，给视频一个加载的机会
+    setForceStatic(false);
+
+    if (!store.useVideoWallpaper) return;
+
+    const timer = setTimeout(() => {
+      const video = videoRef.current;
+      // 核心判断：如果视频不存在、被浏览器暂停(autoplay拦截)、时间停留在0、或根本没缓冲好
+      if (!video || video.paused || video.currentTime === 0 || video.readyState < 3) {
+        setForceStatic(true); // 5秒了还没动静，强制转静态壁纸！
+      }
+    }, 5000); // 5000毫秒 = 5秒
+
+    return () => clearTimeout(timer);
+  }, [store.useVideoWallpaper, store.wallpaperVideoIndex]);
+
   // ----------------------------------------
   // C. 事件处理器 Handlers
   // ----------------------------------------
@@ -120,29 +142,50 @@ export default function Desktop(props: MacActions) {
        ]
     });
   };
+
   // -- 渲染背景壁纸 --
-  const renderWallpaper = () => (
-    <>
-      <div 
-        ref={bgScrollRef}
-        onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}
-        onContextMenu={handleDesktopContextMenu} onDoubleClick={handleNextWallpaper}
-        className="absolute inset-0 z-0 overflow-x-hidden overflow-y-hidden desktop-bg-scroll pointer-events-auto cursor-grab active:cursor-grabbing"
-      >
-        {!store.useVideoWallpaper ? (
-          <img src={store.dark ? wallpapers.night : wallpapers.day} alt="wallpaper" className="h-full w-[250vw] sm:w-[120vw] max-w-none object-cover pointer-events-none" style={{ filter: `brightness( ${(store.brightness as number) * 0.7 + 50}% )` }} />
-        ) : (
-          <video ref={videoRef} key={VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.src} className="h-full w-[250vw] sm:w-[120vw] max-w-none object-cover pointer-events-none transition-opacity duration-1000" src={VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.src} autoPlay loop muted playsInline style={{ filter: `brightness( ${(store.brightness as number) * 0.7 + 50}% )` }} />
-        )}
-      </div>
-      {store.useVideoWallpaper && (
-        <div onClick={handleNextWallpaper} onContextMenu={(e) => e.stopPropagation()} className="absolute bottom-24 right-6 z-[40] px-4 py-2 bg-black/40 hover:bg-black/60 active:scale-95 transition-all backdrop-blur-md rounded-full text-white/90 text-xs font-medium cursor-pointer shadow-lg flex items-center pointer-events-auto">
-          <span className="w-3 h-3 rounded-full bg-white/20 animate-pulse mr-2" />Playing: {VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.name} 
+  const renderWallpaper = () => {
+    // 🌟 核心渲染判断：用户关闭了动态壁纸 OR 5秒检测判定为黑屏
+    const showStatic = !store.useVideoWallpaper || forceStatic;
+    const staticBg = store.dark ? wallpapers.night : wallpapers.day;
+
+    return (
+      <>
+        <div 
+          ref={bgScrollRef}
+          onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}
+          onContextMenu={handleDesktopContextMenu} onDoubleClick={handleNextWallpaper}
+          className="absolute inset-0 z-0 overflow-x-hidden overflow-y-hidden desktop-bg-scroll pointer-events-auto cursor-grab active:cursor-grabbing"
+        >
+          {showStatic ? (
+            <img 
+              src={staticBg} 
+              alt="wallpaper" 
+              className="h-full w-[250vw] sm:w-[120vw] max-w-none object-cover pointer-events-none transition-opacity duration-1000" 
+              style={{ filter: `brightness( ${(store.brightness as number) * 0.7 + 50}% )` }} 
+            />
+          ) : (
+            <video 
+              ref={videoRef} 
+              key={VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.src} 
+              className="h-full w-[250vw] sm:w-[120vw] max-w-none object-cover pointer-events-none transition-opacity duration-1000" 
+              src={VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.src} 
+              autoPlay loop muted playsInline 
+              poster={staticBg} // 加上 poster，即使在前5秒视频没出来，也能看到静态图而不是黑屏
+              style={{ filter: `brightness( ${(store.brightness as number) * 0.7 + 50}% )` }} 
+            />
+          )}
         </div>
-      )}
-    </>
-  );
+        {!showStatic && (
+          <div onClick={handleNextWallpaper} onContextMenu={(e) => e.stopPropagation()} className="absolute bottom-24 right-6 z-[40] px-4 py-2 bg-black/40 hover:bg-black/60 active:scale-95 transition-all backdrop-blur-md rounded-full text-white/90 text-xs font-medium cursor-pointer shadow-lg flex items-center pointer-events-auto">
+            <span className="w-3 h-3 rounded-full bg-white/20 animate-pulse mr-2" />Playing: {VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.name} 
+          </div>
+        )}
+      </>
+    );
+  };
+
   // -- 渲染应用窗口 --
   const renderAppWindows = () => {
     return store.activeWindows.map((win) => {
@@ -191,6 +234,7 @@ export default function Desktop(props: MacActions) {
           <DesktopFileGrid filemap={DESKTOP_FILES} />
         </div>
       </div>
+
       {/* 3. 系统 UI 与交互层 (z-20) */}
       <div className="absolute inset-0 z-20 pointer-events-none">
         
