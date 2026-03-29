@@ -18,13 +18,15 @@ export default function WindowSettings() {
   }));
 
   const videoWallpapers = [
-    { name: '16:9', src: '/video/凯尔希.mp4' },
-    { name: '海滨公园打伞的澪', src: '/video/零.mp4' },
-    { name: 'Mona', src: '/video/莫娜.mp4' },
-    { name: 'Wallpaper 2', src: '/video/wallpaper2.mp4' },
-    { name: 'Wallpaper 3', src: '/video/wallpaper3.mp4' },
-    { name: 'Wallpaper 4', src: '/video/wallpaper4.mp4' },
-    { name: 'Wallpaper 5', src: '/video/wallpaper5.mp4' },
+    { name: '海滨公园打伞的澪', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/default.mp4' },
+    { name: 'Mona', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/MonaWallpaperFHD.mp4' },
+    { name: 'Wallpaper 1', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/wallpaper.mp4' },
+    { name: 'Wallpaper 2', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/wallpaper2.mp4' },
+    { name: 'Wallpaper 3', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/wallpaper3.mp4' },
+    { name: 'Wallpaper 4', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/wallpaper4.mp4' },
+    { name: 'Wallpaper 5', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/wallpaper5.mp4' },
+    { name: '合成动画', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/1_1.mp4' },
+    { name: '16:9', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/16.9.mp4' },
   ];
 
   return (
