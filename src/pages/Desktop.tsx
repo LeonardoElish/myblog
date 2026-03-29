@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useStore } from "~/stores"; 
 import { apps, wallpapers } from "~/configs";
 import { minMarginY } from "~/utils";
@@ -36,14 +36,7 @@ const VIDEO_WALLPAPERS = [
   { name: '16:9', src: 'https://github.com/hesphoros/hesphoros.github.io/releases/download/v1.0-videos/16.9.mp4' },
 ];
 
-// ==========================================
-// 2. 主组件 Desktop
-// ==========================================
 export default function Desktop(props: MacActions) {
-  
-  // ----------------------------------------
-  // A. 状态与 Ref 管理
-  // ----------------------------------------
   const store = useStore();
   
   const [state, setState] = useState<DesktopState>({
@@ -60,32 +53,7 @@ export default function Desktop(props: MacActions) {
   const startX = useRef(0);
   const scrollLeft = useRef(0);
 
-  // 🌟 新增：强制静态壁纸状态
-  const [forceStatic, setForceStatic] = useState(false);
-
-  // 🌟 新增：5秒黑屏/播放失败检测逻辑
-  useEffect(() => {
-    // 每次切换壁纸或者开启视频壁纸时，先重置状态，给视频一个加载的机会
-    setForceStatic(false);
-
-    if (!store.useVideoWallpaper) return;
-
-    const timer = setTimeout(() => {
-      const video = videoRef.current;
-      // 核心判断：如果视频不存在、被浏览器暂停(autoplay拦截)、时间停留在0、或根本没缓冲好
-      if (!video || video.paused || video.currentTime === 0 || video.readyState < 3) {
-        setForceStatic(true); // 5秒了还没动静，强制转静态壁纸！
-      }
-    }, 5000); // 5000毫秒 = 5秒
-
-    return () => clearTimeout(timer);
-  }, [store.useVideoWallpaper, store.wallpaperVideoIndex]);
-
-  // ----------------------------------------
-  // C. 事件处理器 Handlers
-  // ----------------------------------------
-  
-  // -- 1. 壁纸拖拽与切换 --
+  // -- 交互控制 --
   const handlePointerDown = (e: React.PointerEvent) => {
     isDragging.current = true;
     startX.current = e.pageX - (bgScrollRef.current?.offsetLeft || 0);
@@ -106,7 +74,6 @@ export default function Desktop(props: MacActions) {
     store.setWallpaperVideoIndex((store.wallpaperVideoIndex + 1) % VIDEO_WALLPAPERS.length);
   };
 
-  // -- 2. App 与 UI 控制 --
   const handleOpenApp = (id: string) => {
     const appConfig = apps.find((item) => item.id.toLowerCase() === id.toLowerCase());
     if (appConfig?.link) {
@@ -120,7 +87,6 @@ export default function Desktop(props: MacActions) {
   const toggleLaunchpad = (target: boolean) => setState((prev) => ({ ...prev, showLaunchpad: target }));
   const toggleSpotlight = () => setState((prev) => ({ ...prev, spotlight: !prev.spotlight }));
 
-  // -- 3. 右键菜单 (纯英文) --
   const handleDesktopContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     store.setContextMenu({
@@ -145,8 +111,6 @@ export default function Desktop(props: MacActions) {
 
   // -- 渲染背景壁纸 --
   const renderWallpaper = () => {
-    // 🌟 核心渲染判断：用户关闭了动态壁纸 OR 5秒检测判定为黑屏
-    const showStatic = !store.useVideoWallpaper || forceStatic;
     const staticBg = store.dark ? wallpapers.night : wallpapers.day;
 
     return (
@@ -156,30 +120,35 @@ export default function Desktop(props: MacActions) {
           onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}
           onContextMenu={handleDesktopContextMenu} onDoubleClick={handleNextWallpaper}
-          className="absolute inset-0 z-0 overflow-x-hidden overflow-y-hidden desktop-bg-scroll pointer-events-auto cursor-grab active:cursor-grabbing"
+          className="absolute inset-0 z-0 overflow-x-hidden overflow-y-hidden desktop-bg-scroll pointer-events-auto cursor-grab active:cursor-grabbing bg-black"
         >
-          {showStatic ? (
-            <img 
-              src={staticBg} 
-              alt="wallpaper" 
-              className="h-full w-[250vw] sm:w-[120vw] max-w-none object-cover pointer-events-none transition-opacity duration-1000" 
-              style={{ filter: `brightness( ${(store.brightness as number) * 0.7 + 50}% )` }} 
-            />
-          ) : (
+          {/* 🌟 永远垫底的静态图片，不加过渡动画，保证瞬间出现 */}
+          <img 
+            src={staticBg} 
+            alt="wallpaper-fallback" 
+            className="absolute inset-0 h-full w-[250vw] sm:w-[120vw] max-w-none object-cover pointer-events-none" 
+            style={{ filter: `brightness( ${(store.brightness as number) * 0.7 + 50}% )` }} 
+          />
+
+          {/* 🌟 如果开启了动态壁纸，直接盖在静态图上面渲染。没加载出来前就是透明的。 */}
+          {store.useVideoWallpaper && (
             <video 
               ref={videoRef} 
               key={VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.src} 
-              className="h-full w-[250vw] sm:w-[120vw] max-w-none object-cover pointer-events-none transition-opacity duration-1000" 
+              className="absolute inset-0 h-full w-[250vw] sm:w-[120vw] max-w-none object-cover pointer-events-none transition-opacity duration-1000" 
               src={VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.src} 
-              autoPlay loop muted playsInline 
-              poster={staticBg} // 加上 poster，即使在前5秒视频没出来，也能看到静态图而不是黑屏
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
               style={{ filter: `brightness( ${(store.brightness as number) * 0.7 + 50}% )` }} 
             />
           )}
         </div>
-        {!showStatic && (
+        
+        {store.useVideoWallpaper && (
           <div onClick={handleNextWallpaper} onContextMenu={(e) => e.stopPropagation()} className="absolute bottom-24 right-6 z-[40] px-4 py-2 bg-black/40 hover:bg-black/60 active:scale-95 transition-all backdrop-blur-md rounded-full text-white/90 text-xs font-medium cursor-pointer shadow-lg flex items-center pointer-events-auto">
-            <span className="w-3 h-3 rounded-full bg-white/20 animate-pulse mr-2" />Playing: {VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.name} 
+             <span className="w-3 h-3 rounded-full bg-white/20 animate-pulse mr-2" />Playing: {VIDEO_WALLPAPERS[store.wallpaperVideoIndex]?.name} 
           </div>
         )}
       </>
@@ -225,10 +194,10 @@ export default function Desktop(props: MacActions) {
   return (
     <div className="fixed inset-0 overflow-hidden bg-black select-none" onContextMenu={handleDesktopContextMenu}>
       
-      {/* 1. 背景层 (z-0) */}
+      {/* 1. 背景层 */}
       {renderWallpaper()}
 
-      {/* 2. 桌面文件层 (z-10) */}
+      {/* 2. 桌面文件层 */}
       <div className="absolute inset-0 z-10 pointer-events-none" style={{ top: minMarginY }}>
         <div className="w-full h-full pointer-events-auto">
           <DesktopFileGrid filemap={DESKTOP_FILES} />
@@ -238,17 +207,15 @@ export default function Desktop(props: MacActions) {
       {/* 3. 系统 UI 与交互层 (z-20) */}
       <div className="absolute inset-0 z-20 pointer-events-none">
         
-        {/* 顶部菜单栏 */}
         <div className="pointer-events-auto" onContextMenu={(e) => e.stopPropagation()}>
           <TopBar title={state.currentTitle} setLogin={props.setLogin} shutMac={props.shutMac} sleepMac={props.sleepMac} restartMac={props.restartMac} toggleSpotlight={toggleSpotlight} hide={state.hideDockAndTopbar} setSpotlightBtnRef={setSpotlightBtnRef} />
         </div>
-        
-        {/* 窗口挂载区 */}
+
+      {/* 窗口挂载区 */}
         <div className="absolute inset-0 pointer-events-none">
           {renderAppWindows()}
         </div>
 
-        {/* 悬浮组件 (Spotlight, Launchpad, Dock, 消息中心) */}
         {state.spotlight && (
           <div className="pointer-events-auto" onContextMenu={(e) => e.stopPropagation()}>
             <Spotlight openApp={handleOpenApp} toggleLaunchpad={toggleLaunchpad} toggleSpotlight={toggleSpotlight} btnRef={spotlightBtnRef as React.RefObject<HTMLDivElement>} />
@@ -266,10 +233,9 @@ export default function Desktop(props: MacActions) {
         
       </div>
 
-      {/* 4. 全局右键菜单 */}
+      {/* 5. 全局右键菜单 */}
       <ContextMenu />
       
-      {/* 5. 隐藏滚动条样式 */}
       <style>{`
         .desktop-bg-scroll::-webkit-scrollbar { display: none; }
         .desktop-bg-scroll { -ms-overflow-style: none; scrollbar-width: none; }
