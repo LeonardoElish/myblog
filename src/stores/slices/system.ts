@@ -65,7 +65,7 @@ export const createSystemSlice: StateCreator<any, [], [], SystemSlice> = (set, g
   settingsTab: 'Profile',
   settingsTab2: 'About Me',
   useVideoWallpaper: true,
-  wallpaperVideoIndex: 0,
+  wallpaperVideoIndex: 8,
 
   // 🌟 初始化新增状态
   activeWindows: [],
