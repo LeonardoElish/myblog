@@ -61,6 +61,7 @@ declare global {
   const useSyncExternalStore: typeof import('react')['useSyncExternalStore']
   const useTransition: typeof import('react')['useTransition']
   const useWindowSize: typeof import('./hooks/useWindowSize')['useWindowSize']
+  const webinweb: typeof import('./components/apps/webinweb')['default']
 }
 // for type re-export
 declare global {

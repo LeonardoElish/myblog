@@ -11,6 +11,7 @@ import Terminal from "~/components/apps/Terminal";
 import Notifications from "~/components/apps/Notification";
 import Explorer from "~/components/apps/Explorer";
 import Finder from "~/components/apps/Finder";
+import WebInWeb from '~/components/apps/webinweb';
 const apps: AppsData[] = [
   {
     id: "launchpad",
@@ -145,6 +146,16 @@ const apps: AppsData[] = [
     height: 500,
     img: "img/icons/taskview.png",
     content: <Finder />
+  },
+  {
+    id: 'webinweb',
+    title: 'Web in Web',
+    width: 1200, // 可以稍微给宽一点，适合浏览网页
+    height: 800,
+    desktop: true,
+    show: false,
+    img: "img/icons/webinweb.png",
+    content: <WebInWeb />, 
   },
 ];
 
