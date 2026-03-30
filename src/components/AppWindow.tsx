@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Rnd } from "react-rnd";
 import { useStore } from "~/stores";
 
-// 🌟 1. 加上严谨的 TS 类型定义
 interface AppWindowProps {
   id: string;
   title: string;
@@ -19,11 +18,27 @@ interface AppWindowProps {
 }
 
 const TrafficLights = ({ id, close, setMax, setMin }: Partial<AppWindowProps>) => (
-  // 🌟 修复红绿灯的事件冒泡，防止双击红绿灯触发窗口放大
-  <div className="flex flex-row absolute left-0 space-x-2 pl-3 mt-2 z-[100] pointer-events-auto" onDoubleClick={(e) => e.stopPropagation()}>
-    <button className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 shadow-inner" onClick={(e) => { e.stopPropagation(); close?.(id!); }} />
-    <button className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 shadow-inner" onClick={(e) => { e.stopPropagation(); setMin?.(id!); }} />
-    <button className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 shadow-inner" onClick={(e) => { e.stopPropagation(); setMax?.(id!); }} />
+  <div 
+    className="cancel-drag absolute left-0 flex space-x-2 pl-3 z-50"
+    onPointerDown={(e) => e.stopPropagation()}
+    onTouchStart={(e) => e.stopPropagation()}
+    onMouseDown={(e) => e.stopPropagation()}
+  >
+    <button 
+      className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 shadow-inner" 
+      onClick={() => close?.(id!)} 
+      onTouchEnd={(e) => { e.preventDefault(); close?.(id!); }} 
+    />
+    <button 
+      className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 shadow-inner" 
+      onClick={() => setMin?.(id!)} 
+      onTouchEnd={(e) => { e.preventDefault(); setMin?.(id!); }}
+    />
+    <button 
+      className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 shadow-inner" 
+      onClick={() => setMax?.(id!)} 
+      onTouchEnd={(e) => { e.preventDefault(); setMax?.(id!); }}
+    />
   </div>
 );
 
@@ -31,7 +46,6 @@ export default function AppWindow(props: AppWindowProps) {
   const dockSize = useStore((state) => state.dockSize) || 50;
   const [winSize, setWinSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
-  // 假设你的系统顶部状态栏高度是 28px
   const TOP_BAR_HEIGHT = 28; 
 
   useEffect(() => {
@@ -46,7 +60,6 @@ export default function AppWindow(props: AppWindowProps) {
   const [state, setState] = useState({
     width: initWidth,
     height: initHeight,
-    // 随机初始位置，防止新窗口完全重叠
     x: (winSize.w - initWidth) / 2 + (Math.random() * 40 - 20),
     y: (winSize.h - initHeight - dockSize) / 2 + (Math.random() * 40 - 20)
   });
@@ -57,7 +70,6 @@ export default function AppWindow(props: AppWindowProps) {
 
   return (
     <Rnd
-      // 🌟 2. 修复最大化时的尺寸：不要盖住 TopBar
       size={{ 
         width: isMax ? winSize.w : state.width, 
         height: isMax ? (winSize.h - TOP_BAR_HEIGHT) : state.height 
@@ -71,25 +83,28 @@ export default function AppWindow(props: AppWindowProps) {
         setState({ width: parseInt(ref.style.width), height: parseInt(ref.style.height), ...pos });
       }}
       dragHandleClassName="window-bar"
+      cancel=".cancel-drag" 
       disableDragging={isMax}
       enableResizing={!isMax}
       style={{ zIndex: props.z, position: 'fixed' }}
-      onMouseDown={() => props.focus(props.id)}
+      
     >
-      <div className={`w-full h-full flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border border-black/10 dark:border-white/10 ${isMax ? 'rounded-none' : 'rounded-xl'} pointer-events-auto`}>
-        
-        {/* 🌟 3. 增加 onDoubleClick，实现双击标题栏放大/恢复 */}
+      <div 
+        className={`w-full h-full flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border border-black/10 dark:border-white/10 ${isMax ? 'rounded-none' : 'rounded-xl'} pointer-events-auto`}
+        onPointerDownCapture={() => props.focus(props.id)}
+      >
         <div 
-          className="window-bar flex-none relative h-8 flex items-center justify-center bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-black/10 cursor-default"
+          className="window-bar touch-none flex-none relative h-8 flex items-center justify-center bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-black/10 cursor-default"
           onDoubleClick={() => props.setMax(props.id)}
         >
           <TrafficLights id={props.id} close={props.close} setMax={props.setMax} setMin={props.setMin} />
-          <span className="font-semibold text-[13px] text-gray-700 dark:text-gray-300 select-none pointer-events-none">{props.title}</span>
+          <span className="font-semibold text-[13px] text-gray-700 dark:text-gray-300 pointer-events-none select-none">{props.title}</span>
         </div>
         
-        <div className="flex-grow w-full relative overflow-auto bg-white dark:bg-gray-900">
+        <div className="flex-grow w-full relative overflow-auto bg-white dark:bg-gray-900 cancel-drag">
           {props.children}
         </div>
+        
       </div>
     </Rnd>
   );

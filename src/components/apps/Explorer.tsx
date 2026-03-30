@@ -1,13 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '~/stores';
 import { ChevronLeft, ChevronRight, Home, HardDrive, Clock } from 'lucide-react';
 
 export default function Explorer({ filemap = [], openpath = [] }: any) {
+  // 这里的 useState 只管第一次打开
   const [currentPath, setCurrentPath] = useState<string[]>(openpath);
-  const [selectedId, setSelectedId] = useState<string | null>(null); // 🌟 增加选中状态
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const openApp = useStore(state => state.openApp);
 
-  // 1. 解析当前路径下的文件列表 (逻辑保持不变)
+  const [lastTap, setLastTap] = useState<{ id: string; time: number }>({ id: '', time: 0 });
+  useEffect(() => {
+    setCurrentPath(openpath);
+    setSelectedId(null); // 顺便清空之前的选中状态
+  }, [openpath.join('/')]); // 用 join 拼成字符串作为依赖，防止无限重渲染
+
+  // 1. 解析当前路径下的文件列表
   const currentDirItems = useMemo(() => {
     let curr = filemap;
     for (const seg of currentPath) {
@@ -24,7 +31,7 @@ export default function Explorer({ filemap = [], openpath = [] }: any) {
   }, [filemap, currentPath]);
 
   // 2. 处理双击打开
-  const handleDoubleClick = (item: any) => {
+  const executeDoubleClick = (item: any) => {
     if (item.children) {
       setCurrentPath([...currentPath, item.name]);
       setSelectedId(null);
@@ -42,14 +49,30 @@ export default function Explorer({ filemap = [], openpath = [] }: any) {
     }
   };
 
+  // 3. 内部项的点击与双击处理（防手机端穿透放大）
+  const handleItemTouchOrClick = (e: React.MouseEvent | React.TouchEvent, item: any) => {
+    e.stopPropagation();
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (lastTap.id === item.fileuuid && now - lastTap.time < DOUBLE_TAP_DELAY) {
+      e.preventDefault(); 
+      executeDoubleClick(item);
+      setLastTap({ id: '', time: 0 }); 
+    } else {
+      setSelectedId(item.fileuuid);
+      setLastTap({ id: item.fileuuid, time: now });
+    }
+  };
+
   const goBack = () => {
     if (currentPath.length > 0) setCurrentPath(p => p.slice(0, -1));
   };
 
   return (
     <div 
-      className="flex flex-col h-full w-full bg-white dark:bg-gray-900 select-none overflow-hidden"
-      onClick={() => setSelectedId(null)} // 点击空白处取消选中
+      className="flex flex-col h-full w-full bg-white dark:bg-gray-900 select-none overflow-hidden touch-manipulation"
+      onClick={() => setSelectedId(null)} 
     >
       {/* 顶部工具栏 */}
       <div className="h-10 flex items-center px-4 gap-2 bg-gray-100/80 dark:bg-gray-800/80 border-b border-black/5 dark:border-white/5 backdrop-blur-md">
@@ -88,7 +111,7 @@ export default function Explorer({ filemap = [], openpath = [] }: any) {
 
       <div className="flex grow min-h-0">
         {/* 侧边栏 */}
-        <div className="w-40 flex-none border-r border-black/5 dark:border-white/5 p-2 flex flex-col gap-0.5 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm">
+        <div className="w-40 flex-none border-r border-black/5 dark:border-white/5 p-2 flex flex-col gap-0.5 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm hidden sm:flex">
            <div className="px-2 py-1.5 opacity-40 text-[10px] font-bold uppercase mb-1 mt-2 tracking-wider">Favorites</div>
            <div className="px-2 py-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-xs flex items-center gap-2 opacity-50"><Clock size={14}/> Recent</div>
            <div 
@@ -104,7 +127,7 @@ export default function Explorer({ filemap = [], openpath = [] }: any) {
         <div className="flex-grow flex flex-col bg-white dark:bg-gray-900">
           <div className="flex px-4 py-1.5 border-b border-black/5 dark:border-white/5 text-[10px] text-gray-400 font-bold uppercase tracking-tight">
             <div className="w-1/2">Name</div>
-            <div className="w-1/4">Date Modified</div>
+            <div className="w-1/4 hidden sm:block">Date Modified</div>
             <div className="w-1/4">Size</div>
           </div>
           
@@ -118,9 +141,8 @@ export default function Explorer({ filemap = [], openpath = [] }: any) {
               currentDirItems.map((item: any) => (
                 <div 
                   key={item.fileuuid} 
-                  onClick={(e) => { e.stopPropagation(); setSelectedId(item.fileuuid); }} // 单击选中
-                  onDoubleClick={(e) => { e.stopPropagation(); handleDoubleClick(item); }} 
-                  className={`group flex items-center px-3 py-1 rounded-md text-[13px] cursor-default transition-colors mb-[1px]
+                  onClick={(e) => handleItemTouchOrClick(e, item)}
+                  className={`group flex items-center px-3 py-1 rounded-md text-[13px] cursor-default transition-colors mb-[1px] touch-manipulation
                     ${selectedId === item.fileuuid 
                       ? 'bg-blue-500 text-white' 
                       : 'hover:bg-blue-500/10 dark:hover:bg-blue-500/20 text-gray-700 dark:text-gray-200'}
@@ -134,7 +156,7 @@ export default function Explorer({ filemap = [], openpath = [] }: any) {
                     />
                     <span className="truncate">{item.name}</span>
                   </div>
-                  <div className={`w-1/4 text-xs font-mono ${selectedId === item.fileuuid ? 'text-blue-100' : 'opacity-60'}`}>Today 10:17</div>
+                  <div className={`w-1/4 hidden sm:block text-xs font-mono ${selectedId === item.fileuuid ? 'text-blue-100' : 'opacity-60'}`}>Today 10:17</div>
                   <div className={`w-1/4 text-xs font-mono ${selectedId === item.fileuuid ? 'text-blue-100' : 'opacity-60'}`}>
                     {item.children ? '--' : (item.size > 1024 ? `${(item.size/1024).toFixed(1)} KB` : `${item.size} B`)}
                   </div>

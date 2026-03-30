@@ -122,15 +122,12 @@ export default function Desktop(props: MacActions) {
           onContextMenu={handleDesktopContextMenu} onDoubleClick={handleNextWallpaper}
           className="absolute inset-0 z-0 overflow-x-hidden overflow-y-hidden desktop-bg-scroll pointer-events-auto cursor-grab active:cursor-grabbing bg-black"
         >
-          {/* 🌟 永远垫底的静态图片，不加过渡动画，保证瞬间出现 */}
           <img 
             src={staticBg} 
             alt="wallpaper-fallback" 
             className="absolute inset-0 h-full w-[250vw] sm:w-[120vw] max-w-none object-cover pointer-events-none" 
             style={{ filter: `brightness( ${(store.brightness as number) * 0.7 + 50}% )` }} 
           />
-
-          {/* 🌟 如果开启了动态壁纸，直接盖在静态图上面渲染。没加载出来前就是透明的。 */}
           {store.useVideoWallpaper && (
             <video 
               ref={videoRef} 
@@ -192,8 +189,8 @@ export default function Desktop(props: MacActions) {
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-black select-none" onContextMenu={handleDesktopContextMenu}>
-      
+    //<div className="fixed inset-0 overflow-hidden bg-black select-none" onContextMenu={handleDesktopContextMenu}>
+    <div className="fixed inset-0 overflow-hidden bg-black select-none touch-manipulation" onContextMenu={handleDesktopContextMenu}>  
       {/* 1. 背景层 */}
       {renderWallpaper()}
 
@@ -204,17 +201,17 @@ export default function Desktop(props: MacActions) {
         </div>
       </div>
 
-      {/* 3. 系统 UI 与交互层 (z-20) */}
-      <div className="absolute inset-0 z-20 pointer-events-none">
+      {/* 3. 系统 UI 与交互层 (z-30) */}
+      <div className="absolute inset-0 z-30 pointer-events-none">
         
         <div className="pointer-events-auto" onContextMenu={(e) => e.stopPropagation()}>
           <TopBar title={state.currentTitle} setLogin={props.setLogin} shutMac={props.shutMac} sleepMac={props.sleepMac} restartMac={props.restartMac} toggleSpotlight={toggleSpotlight} hide={state.hideDockAndTopbar} setSpotlightBtnRef={setSpotlightBtnRef} />
         </div>
 
       {/* 窗口挂载区 */}
-        <div className="absolute inset-0 pointer-events-none">
-          {renderAppWindows()}
-        </div>
+        <div className="absolute inset-0 z-20 pointer-events-none">
+        {renderAppWindows()}
+      </div>
 
         {state.spotlight && (
           <div className="pointer-events-auto" onContextMenu={(e) => e.stopPropagation()}>
