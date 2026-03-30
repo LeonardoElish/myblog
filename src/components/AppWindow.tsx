@@ -47,6 +47,7 @@ export default function AppWindow(props: AppWindowProps) {
   const [winSize, setWinSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   const TOP_BAR_HEIGHT = 28; 
+  const DOCK_HEIGHT = dockSize + 20;
 
   useEffect(() => {
     const handleResize = () => setWinSize({ w: window.innerWidth, h: window.innerHeight });
@@ -72,8 +73,8 @@ export default function AppWindow(props: AppWindowProps) {
     <Rnd
       size={{ 
         width: isMax ? winSize.w : state.width, 
-        height: isMax ? (winSize.h - TOP_BAR_HEIGHT) : state.height 
-      }}
+        height: isMax ? (winSize.h - TOP_BAR_HEIGHT - DOCK_HEIGHT) : state.height 
+      }} 
       position={{ 
         x: isMax ? 0 : state.x, 
         y: isMax ? TOP_BAR_HEIGHT : state.y 
@@ -90,7 +91,8 @@ export default function AppWindow(props: AppWindowProps) {
       
     >
       <div 
-        className={`w-full h-full flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border border-black/10 dark:border-white/10 ${isMax ? 'rounded-none' : 'rounded-xl'} pointer-events-auto`}
+        //className={`w-full h-full flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border border-black/10 dark:border-white/10 ${isMax ? 'rounded-none' : 'rounded-xl'} pointer-events-auto`}
+        className={`w-full h-full flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border border-black/10 dark:border-white/10 rounded-xl pointer-events-auto`}
         onPointerDownCapture={() => props.focus(props.id)}
       >
         <div 

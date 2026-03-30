@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "~/stores"; 
 import { apps, wallpapers } from "~/configs";
 import { minMarginY } from "~/utils";
@@ -52,6 +52,15 @@ export default function Desktop(props: MacActions) {
   const isDragging = useRef(false);
   const startX = useRef(0);
   const scrollLeft = useRef(0);
+
+  // 🌟 新增：页面加载时自动启动 webinweb
+  useEffect(() => {
+    // 检查是否已经打开，防止开发环境下 StrictMode 触发两次
+    const isOpen = useStore.getState().activeWindows.some((win) => win.id === 'webinweb');
+    if (!isOpen) {
+      store.openApp('webinweb');
+    }
+  }, []); // 依赖数组为空，保证只在组件初始化时运行一次
 
   // -- 交互控制 --
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -171,7 +180,7 @@ export default function Desktop(props: MacActions) {
         }
       }
       return (
-        <div key={win.id} className="pointer-events-auto">
+        <div key={win.id} className="pointer-events-auto absolute inset-0">
           <AppWindow 
             id={win.id}
             title={win.props?.filename || config?.title || win.type}
@@ -189,7 +198,6 @@ export default function Desktop(props: MacActions) {
   };
 
   return (
-    //<div className="fixed inset-0 overflow-hidden bg-black select-none" onContextMenu={handleDesktopContextMenu}>
     <div className="fixed inset-0 overflow-hidden bg-black select-none touch-manipulation" onContextMenu={handleDesktopContextMenu}>  
       {/* 1. 背景层 */}
       {renderWallpaper()}
